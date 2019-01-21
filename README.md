@@ -1,2 +1,2 @@
-# Noonle
+# Doodle
 A news generator
