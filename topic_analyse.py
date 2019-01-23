@@ -8,31 +8,23 @@ Original file is located at
 """
 
 # 下载数据
-!curl 'https://storage.googleapis.com/kaggle-datasets/62680/121140/chinese-official-daily-news-since-2016.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1548380407&Signature=nGJBagdwTDNx9zG%2FFT%2FJxwDer5EgKePBKeBEEoYwWIT2YHGSe6uSZBybgh1WIViY5DkZruGZe72UprZDDU2Yj2XXJhT2LS%2FpNmGNHfonckMZzywUMrRcgsvfjpGCcE8EpsfHSZKFto%2FM0HZIBfmEgnhSkIgSTNMMUhCCoFG1UTEcNpgWE2MUB2ZDTawpjFbd7qxBY%2FXpgScoLSR8JpFH0XAWQn3MyTDDbs1xKAbCu6zH2tUBtzokffRI7JzCPMZ2xgZZMWkK3IxuLaiZ9BHNTV4EQSveE7Q7eeCzB5uQ%2FjYoiXGiqK6HSHV0Z5kx8AQWLMSHjFzvylV3AXJdBvYQQg%3D%3D' -H 'authority: storage.googleapis.com' -H 'pragma: no-cache' -H 'cache-control: no-cache' -H 'upgrade-insecure-requests: 1' -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8' -H 'referer: https://www.kaggle.com/' -H 'accept-encoding: gzip, deflate, br' -H 'accept-language: zh-CN,zh;q=0.9,en;q=0.8' --compressed -o data.zip
-!unzip data.zip
-!rm data.zip
-
-!pip install -q nltk
-
 #上传文件
-from google.colab import files
-upload = files.upload()
-
-!git clone https://github.com/Determined22/zh-NER-TF.git
+#from google.colab import files
+#upload = files.upload()
+from gensim.models.doc2vec import Doc2Vec
 
 """# 数据加载"""
 
 import pandas as pd
 data = pd.read_csv("chinese_news.csv")
 data = data.dropna()
-print(data[560:570])
+#print(data[560:570]
 
-data['content'][564]
 
 """新闻文本"""
 
 documents = data['content']#[1:10]
-#print(documents)
+print("Load data done.")
 
 doc_num = len(documents)
 print(doc_num)
@@ -82,7 +74,6 @@ def segment():
       news_texts.append(doc_words)
     return texts,news_texts
 
-  
 word_segments,news_texts = segment()
 
 """# 词频统计"""
@@ -96,7 +87,14 @@ for text in word_segments:
   for token in text:
     frequency[token] +=1
     
-word_segments = [[token for token in text if frequency[token] > 1] for text in word_segments] 
+text_segments =[]
+for text in word_segments:
+    tmp_text = []
+    for word in text:
+        if frequency[word] >1:
+            tmp_text.append(word)
+    #if len(tmp_text) != 0:
+    text_segments.append(tmp_text)
 #print(word_segments)
 
 
@@ -106,7 +104,7 @@ word_segments = [[token for token in text if frequency[token] > 1] for text in w
 
 #segmented_file = os.path.join('','segmented')
 segmented_file = open('segmented', "w", encoding="utf-8")
-for text in word_segments:
+for text in text_segments:
   st = ""
 #  #print(text)
   for token in text:
@@ -115,53 +113,6 @@ for text in word_segments:
    #print(st)
   segmented_file.write(st)
   segmented_file.flush()
-
-"""# Word Embedding"""
-
-#Wording Embedding
-from gensim import corpora,models,similarities
-from gensim.models import word2vec
-import os
-
-
-
-#print(dictionary.token2id)
-print("Training Word2vec model....")
-#sentences = word2vec.Text8Corpus(segmented_file)
-model = word2vec.Word2Vec(word_segments,size=200,window=10,workers=8,sg=1,hs=1,iter=10)
-
-word2vec_model_file = os.path.join('./','word2vec.model')
-
-model.wv.save_word2vec_format(word2vec_model_file,binary=True)
-
-print("Word2vec Model Saved")
-
-"""测试模型"""
-
-# 测试模型
-
-from gensim.models.keyedvectors import KeyedVectors
-word_vectors = KeyedVectors.load_word2vec_format(word2vec_model_file, binary=True)
-#print(query_list)
-print("计算2个词汇间的 Cosine 相似度")
-query_list = word_vectors.doesnt_match(['中国', '美国','旧金山'])
-print(word_vectors.similarity('总书记','中国'))
-print(query_list)
-
-"""# 文本向量生成"""
-
-#Doc2Vec 模型
-from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-from gensim.test.utils import get_tmpfile
-docs = [TaggedDocument(doc, [i]) for i, doc in enumerate(news_texts)]
-
-print("Training Doc2vec.....")
-doc2vec_model = Doc2Vec(docs,dm = 0, alpha=0.025, vector_size = 300, min_alpha=0.025,window=10,works=11)
-fname = get_tmpfile("doc2vec_model")
-doc2vec_model.save(fname)
-print("Train finished")
-
-"""模型导入"""
 
 import re
 def segment_doc(doc):
@@ -179,9 +130,6 @@ def segment_doc(doc):
 
 """# 词云"""
 
-!wget https://github.com/adobe-fonts/source-han-sans/raw/release/SubsetOTF/SourceHanSansCN.zip
-!unzip -j "SourceHanSansCN.zip" "SourceHanSansCN/SourceHanSansCN-Regular.otf" -d "."
-!rm SourceHanSansCN.zip
 
 # %matplotlib inline
 
@@ -199,7 +147,8 @@ def show_words_cloud(text_tokens):
   plt.axis('off')
 
 """# Doc2Vec"""
-
+from gensim.test.utils import get_tmpfile
+fname = get_tmpfile("doc2vec_model")
 doc2vec_model = Doc2Vec.load(fname)
 
 
@@ -212,7 +161,9 @@ def News2vec():
   
 news_vectors = News2vec()
 #test
-#test_text = "中国人民解放军陆军领导机构、中国人民解放军火箭军、中国人民解放军战略支援部队成立大会2015年12月31日在八一大楼隆重举行。中共中央总书记、国家主席、中央军委主席习近平向陆军、火箭军、战略支援部队授予军旗并致训词，代表党中央和中央军委向同志们、向全军部队致以热烈祝贺，强调要坚持以党在新形势下的强军目标为引领，深入贯彻新形势下军事战略方针，全面实施改革强军战略，坚定不移走中国特色强军之路，时刻听从党和人民召唤，忠实履行党和人民赋予的神圣使命，为实现中国梦强军梦作出新的更大的贡献。\n下午4时，成立大会开始，全场高唱国歌。仪仗礼兵护卫着鲜艳军旗，正步行进到主席台前。习近平将军旗郑重授予陆军司令员李作成、政治委员刘雷，火箭军司令员魏凤和政治委员王家胜，战略支援部队司令员高津、政治委员刘福连。陆军、火箭军、战略支援部队主要领导，军容严整、精神抖擞，向习近平敬礼，从习近平手中接过军旗。全场官兵向军旗敬礼。\n授旗仪式后，习近平致训词。他指出：“成立陆军领导机构、火箭军、战略支援部队，是党中央和中央军委着眼实现中国梦强军梦作出的重大决策，是构建中国特色现代军事力量体系的战略举措，必将成为我军现代化建设的一个重要里程碑，载入人民军队史册。”\n习近平强调，陆军是党最早建立和领导的武装力量，历史悠久，敢打善战，战功卓著，为党和人民建立了不朽功勋。陆军对维护国家主权、安全和发展利益具有不可替代的作用。陆军全体官兵要弘扬陆军光荣传统和优良作风，适应信息化时代陆军建设模式和运用方式的深刻变化，探索陆军发展特点和规律，按照机动作战、立体攻防的战略要求，加强顶层设计和领导管理，优化力量结构和部队编成，加快实现区域防卫型向全域作战型转变，努力建设一支强大的现代化新型陆军。\n习近平强调，火箭军是我国战略威慑的核心力量，是我国大国地位的战略支撑，是维护国家安全的重要基石。火箭军全体官兵要把握火箭军的职能定位和使命任务，按照核常兼备、全域慑战的战略要求，增强可信可靠的核威慑和核反击能力，加强中远程精确打击力量建设，增强战略制衡能力，努力建设一支强大的现代化火箭军。\n习近平强调，战略支援部队是维护国家安全的新型作战力量，是我军新质作战能力的重要增长点。战略支援部队全体官兵要坚持体系融合、军民融合，努力在关键领域实现跨越发展，高标准高起点推进新型作战力量加速发展、一体发展，努力建设一支强大的现代化战略支援部队。\n习近平强调：“你们要坚持以党在新形势下的强军目标为引领，深入贯彻新形势下军事战略方针，全面实施改革强军战略，坚定不移走中国特色强军之路，时刻听从党和人民的召唤，忠诚履行党和人民赋予的神圣使命，为实现中国梦强军梦作出新的更大的贡献。”\n刘雷、王家胜、刘福连分别代表陆军、火箭军、战略支援部队发言，一致表示，坚决贯彻习主席训词，任何时候任何情况下都坚决听从党中央、中央军委和习主席指挥，牢记职责使命，忠诚履职尽责，带领部队圆满完成各项任务。\n成立大会上，中共中央政治局委员、中央军委副主席范长龙宣读了习近平主席签发的中央军委关于组建陆军领导机构、火箭军、战略支援部队及其领导班子成员任职命令和决定。中共中央政治局委员、中央军委副主席许其亮主持大会。\n大会在嘹亮的军歌声中结束。之后，习近平亲切接见了陆军、火箭军、战略支援部队领导班子成员，并同大家合影留念。\n中央军委委员常万全、房峰辉、张阳、赵克石、张又侠、吴胜利、马晓天出席大会。四总部、驻京各大单位和军委办公厅领导参加大会。"
+"""
+#test_text = "中国人民解放军陆军领导机构、中国人民解放军火箭军、中国人民解放军战略支援部队成立大会2015年12月31日在八一大楼隆重举行。中共中央总书记、国家主席、中央军委主席习近平向陆军、火箭军、战略支援部队授予军旗并致训词，代表党中央和中央军委向同志们、向全军部队致以热烈祝贺，强调要坚持以党在新形势下的强军目标为引领，深入贯彻新形势下军事战略方针，全面实施改革强军战略，坚定不移走中国特色强军之路，时刻听从党和人民召唤，忠实履行党和人民赋予的神圣使命，为实现中国梦强军梦作出新的更大的贡献。\n下午4时，成立大会开始，全场高唱国歌。仪仗礼兵护卫着鲜艳军旗，正步行进到主席台前。习近平将军旗郑重授予陆军司令员李作成、政治委员刘雷，火箭军司令员魏凤和政治委员王家胜，战略支援部队司令员高津、政治委员刘福连。陆军、火箭军、战略支援部队主要领导，军容严整、精神抖擞，向习近平敬礼，从习近平手中接过军旗。全场官兵向军旗敬礼。\n授旗仪式后，习近平致训词。他指出：“成立陆军领导机构、火箭军、战略支援部队，是党中央和中央军委着眼实现中国梦强军梦作出的重大决策，是构建中国特色现代军事力量体系的战略举措，必将成为我军现代化建设的一个重要里程碑，载入人民军队史册。”\n习近平强调，陆军是党最早建立和领导的武装力量，历史悠久，敢打善战，战功卓著，为党和人民建立了不朽功勋。陆军对维护国家主权、安全和发展利益具有不可替代的作用。陆军全体官兵要弘扬陆军光荣传统和优良作风，适应信息化时代陆军建设模式和运用方式的深刻变化，探索陆军发展特点和规律，按照机动作战、立体攻防的战略要求，加强顶层设计和领导管理，优化力量结构和部队编成，加快实现区域防卫型向全域作战型转变，努力建设一支强大的现代化新型陆军。\n习近平强调，火箭军是我国战略威慑的核心力量，是我国大国地位的战略支撑，是维护国家安全的重要基石。火箭军全体官兵要把握火箭军的职能定位和使命任务，按照核常兼备、全域慑战的战略要求，增强可信可靠的核威慑和核反击能力，加强中远程精确打击力量建设，增强战略制衡能力，努力建设一支强大的现代化火箭军。\n习近平强调，战略支援部队是维护国家安全的新型作战力量，是我军新质作战能力的重要增长点。战略支援部队全体官兵要坚持体系融合、军民融合，努力在关键领域实现跨越发展，高标准高起点推进新型作战力量加速发展、一体发展，努力建设一支强大的现代化战略支援部队。
+"""
 
 #news_token = segment_doc(test_text)
 #vector = doc2vec_model.infer_vector(news_token)
@@ -224,7 +175,7 @@ news_vectors = News2vec()
 from gensim.test.utils import common_corpus, common_dictionary, get_tmpfile
 from gensim.similarities import Similarity
 from gensim import corpora,models,similarities
-wf = open('news_vec','w')
+
 corpora_documents = []
 for document in documents:
   tokens = []
@@ -235,58 +186,42 @@ for document in documents:
           if word not in stopwords:
             sents_segment.append(word)
   corpora_documents.append(sents_segment)
-
 dictionary = corpora.Dictionary(corpora_documents)
 corpus = [dictionary.doc2bow(text) for text in corpora_documents]
-similarity = Similarity('temp', corpus, num_features=400)
+#similarity = Similarity('temp', corpus, num_features=400)
 
 #test
-test_cut_raw_1 = jieba.lcut(test_data_1)
-test_corpus_1 = dictionary.doc2bow(test_cut_raw_1)
-print(test_corpus_1)
-similarity.num_best = 5
-print(similarity[test_corpus_1])
+#test_cut_raw_1 = jieba.lcut(test_data_1)
+#test_corpus_1 = dictionary.doc2bow(test_cut_raw_1)
+#
+#int(test_corpus_1)
+#similarity.num_best = 5
+#print(similarity[test_corpus_1])
 
-#LDA模型
-t_start = time.time()
-lda = models.LdaModel(corpus=corpus, id2word=dictionary, num_topics=20)
-lda.save('news_lda.model')
-print('Train LDA model finished: %.3f s' % (time.time() - t_start))
-
-lda = models.ldamodel.LdaModel.load('news_lda.model')
-lda_topic_list=lda.print_topics(num_topics=20,num_words=20)
-for topic in lda_topic_list:
-  print(topic)
-
-#LSI模型 抽取主题词
-
+import time
 from gensim import corpora,models,similarities
-#创建字典 单词与编号之间的映射
-dictionary = corpora.Dictionary(word_segments)
-corpus = [dictionary.doc2bow(text) for text in word_segments]
-
+import pandas as pd
+import numpy as np
+dictionary = corpora.Dictionary(text_segments)
+corpus = [dictionary.doc2bow(text) for text in text_segments]
 tfidf = models.TfidfModel(corpus)
-#由tf_idf 表示的文档向量
 corpus_tfidf = tfidf[corpus]
-
-import time 
-t_start = time.time()
-lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=200)
-lsi.save('news_lsi.model')
-print('Train LSI model finished: %.3f s' % (time.time() - t_start))
-
+#LSI模型 抽取主题词
 num_show_topic = 20
 lsi = models.lsimodel.LsiModel.load('news_lsi.model')
 topic_list=lsi.print_topics(num_topics=num_show_topic,num_words=20)
 #所有文档的主题分布
 corpus_lsi = lsi[corpus_tfidf]
+
+lda = models.ldamodel.LdaModel.load('news_lda.model')
+corpus_lda = lda[corpus_tfidf]
+
 #for topic in topic_list:
-#  print(topic)
 idx = np.arange(doc_num)
 np.random.shuffle(idx)
 idx = idx[:10]
 for i in idx:
-        topic = np.array(corpus_lsi[i])
+        topic = np.array(corpus_lda[i])
         topic_distribute = np.array(topic[:, 1])
         # print topic_distribute
         topic_idx = topic_distribute.argsort()[:-num_show_topic-1:-1]
@@ -307,17 +242,17 @@ for topic_id in range(200):
             topic_words.append(dictionary.id2token[t])
         print('概率: ', term_distribute[:, 1])
 
-index = similarities.MatrixSimilarity(corpus_lsi)
+#index = similarities.MatrixSimilarity(corpus_lsi)
 
-test_text = "中央军委印发《关于深化国防和军队改革的意见》"
+#test_text = "中央军委印发《关于深化国防和军队改革的意见》"
 #由词index，词频 构建的文档向量
-text_tokens = segment_doc(test_text)
-print(text_tokens)
-test_vec = dictionary.doc2bow(text_tokens)
-print(test_vec)
+#text_tokens = segment_doc(test_text)
+#print(text_tokens)
+#test_vec = dictionary.doc2bow(text_tokens)
+#print(test_vec)
 #计算与数据库中每条标题的相似度
-new_vec = index[test_vec]
-print(new_vec)
+#new_vec = index[test_vec]
+#print(new_vec)
 
 """# 聚类"""
 
@@ -332,14 +267,6 @@ def cluster(news_vecs):
   #print(kmean.cluster_centers_)
   #print(len(kmean.labels_))
   return kmean.labels_,kmean.cluster_centers_
-
-  #print(kmean.inertia_)  
-	#pred = kmean.predict(news_vec)
-
-	#for i in range(len(pred)):
-
-	#print("%d+%d" % (count1, count2))
-  
   
 labels,centers = cluster(news_vecs)
 
@@ -365,15 +292,15 @@ cluster_res = pd.DataFrame(labels, columns=['label'])
 cluster_res = pd.concat([cluster_res, pd.DataFrame(documents)], axis=1)
 
 cluster_res = cluster_res.sort_values('label')
-cluster_res.head()
+#cluster_res.head()
 
-from google.colab import files
+#from google.colab import files
 for label in range(300):
   print("Cluster#",label)
   cluster_segment = []
   cluster_tmp = cluster_res[cluster_res['label']==label]
-  #filename = "cluster_"+str(label)
-  #cluster_tmp.to_csv(filename, index=False, header=False)
+  filename = "cluster_"+str(label)
+  cluster_tmp.to_csv(filename, index=False, header=False)
   #dowload= files.download(filename)
   docs = cluster_tmp['content']
   for doc in docs:
@@ -388,9 +315,9 @@ for item in range(len(corpus_lsi)):
   #print(corpus_lsi[item])
   id_list.append(item)
 
-from gensim import matutils
-lda_csc_matrix = matutils.corpus2csc(corpus_lsi).transpose()  # gensim sparse matrix to scipy sparse matrix
-post_cluster(id_list, lda_csc_matrix)
+#from gensim import matutils
+#lda_csc_matrix = matutils.corpus2csc(corpus_lsi).transpose()  # gensim sparse matrix to scipy sparse matrix
+#post_cluster(id_list, lda_csc_matrix)
 
 """# 年度新闻主题统计"""
 
@@ -417,7 +344,7 @@ import os
 
 def build_word_index():
   if not os.path.exists(word_embedding_file):
-    print 'word embedding file does not exist'
+    print( 'word embedding file does not exist')
     return 
   
   print("Word Embedding....")
