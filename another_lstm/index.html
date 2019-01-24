@@ -1,0 +1,66 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Doodle - 新闻联播风格文本生成</title>
+  <link href="https://cdn.bootcss.com/semantic-ui/2.0.0/semantic.min.css" rel="stylesheet">
+  <script
+    src="https://code.jquery.com/jquery-3.1.1.min.js"
+    integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.bootcss.com/semantic-ui/2.0.0/semantic.min.js"></script>
+  <script src="https://cdn.bootcss.com/jquery-serialize-object/2.5.0/jquery.serialize-object.min.js"></script>
+  <style type="text/css">
+    body > .grid {
+      height: 100%;
+    }
+    .column {
+      max-width: 550px;
+    }
+    .title {
+      font-size: 65px;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="ui middle aligned center aligned grid">
+      <div class="column">
+    <h1 class="image title">
+      <span style='color:#5187ec'> D</span><span style='color:red'>o</span><span style='color:#f1bd42'>o</span><span style='color:#5187ec'>d</span><span style='color:5ba45c'>l</span><span style='color:red'>e</span> </h1>
+      <h4>新闻联播风格文本生成器</h4>
+
+    <form class="ui large form">
+        <div class="ui stacked segment">
+        <div class="field">
+          <div class="ui transparent input">
+              <textarea placeholder="开个头吧：" name="start" id="start"></textarea>
+
+          </div>
+        </div>
+        <div class="ui submit button" id='generate'>生成</div>
+      </div>
+      </form>
+      </div>
+  </div>
+</body>
+<script>
+    $('.submit.button').api({
+      url: '/',
+      method: 'post',
+      serializeForm: true,
+      beforeSend: function(settings){
+        console.log(settings.data);
+        return settings;
+      },
+      onSuccess: function (response) {
+        console.log(response);
+        $('#start').val(decodeURI(response.msg));
+      }
+    });
+    $('.ui.form').submit(function(e){ 
+      return false;
+    });
+</script>
+</html>
